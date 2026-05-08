@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Mobile Snake Game</title>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body{
+    background:linear-gradient(135deg,#d2e785,#a86565,#934b4b);
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:hidden;
+    font-family:Arial, sans-serif;
+}
+
+.game-container{
+    width:100%;
+    max-width:500px;
+    text-align:center;
+    padding:10px;
+}
+
+.title{
+    color:white;
+    margin-bottom:10px;
+    font-size:35px;
+    animation:glow 2s infinite alternate;
+}
+
+@keyframes glow{
+    from{
+        text-shadow:0 0 10px #4cc377;
+    }
+    to{
+        text-shadow:0 0 25px #6ee79a;
+    }
+}
+
+canvas{
+    width:100%;
+    max-width:420px;
+    aspect-ratio:1/1;
+    background:#fffefe;
+    border:4px solid #000000;
+    border-radius:18px;
+    box-shadow:0 0 25px rgba(255, 255, 255, 0.4);
+}
+
+.score-box{
+    margin-top:12px;
+    color:white;
+    font-size:28px;
+    font-weight:bold;
+}
+
+#score{
+    color:#000000;
+}
+
+.controls{
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+}
+
+.controls-row{
+    display:flex;
+    gap:10px;
+}
+
+.btn{
+    width:75px;
+    height:75px;
+    border:none;
+    border-radius:20px;
+    font-size:30px;
+    font-weight:bold;
+    background:#ffffff;
+    color:rgb(0, 0, 0);
+    box-shadow:0 5px 15px rgba(0,0,0,0.3);
+    cursor:pointer;
+    transition:0.15s;
+}
+
+.btn:active{
+    transform:scale(0.92);
+    background:#15803d;
+}
+
+.game-over{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:rgba(255, 255, 255, 0.9);
+    padding:25px;
+    border-radius:18px;
+    text-align:center;
+    display:none;
+    color:rgb(0, 0, 0);
+    z-index:100;
+}
+
+.game-over h2{
+    color:#000000;
+    margin-bottom:10px;
+}
+
+.game-over button{
+    margin-top:15px;
+    padding:12px 25px;
+    border:none;
+    border-radius:12px;
+    background:#22c55e;
+    color:white;
+    font-size:18px;
+    cursor:pointer;
+}
+
+@media (max-width:500px){
+
+    .title{
+        font-size:28px;
+    }
+
+    .btn{
+        width:65px;
+        height:65px;
+        font-size:26px;
+    }
+
+    .score-box{
+        font-size:24px;
+    }
+}
+
+</style>
+</head>
+<body>
+
+<div class="game-container">
+
+    <h1 class="title">🐍 sannp ka khela</h1>
+
+    <canvas id="gameCanvas" width="420" height="420"></canvas>
+
+    <div class="score-box">
+        Score : <span id="score">0</span>
+    </div>
+
+    <!-- MOBILE CONTROLS -->
+    <div class="controls">
+
+        <button class="btn" onclick="setDirection('up')">⬆</button>
+
+        <div class="controls-row">
+            <button class="btn" onclick="setDirection('left')">⬅</button>
+            <button class="btn" onclick="setDirection('down')">⬇</button>
+            <button class="btn" onclick="setDirection('right')">➡</button>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="game-over" id="gameOver">
+    <h2>Game Over</h2>
+    <p>Your snake crashed!</p>
+    <button onclick="restartGame()">Restart</button>
+</div>
+
+<script>
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const scoreEl = document.getElementById("score");
+const gameOverEl = document.getElementById("gameOver");
+
+const gridSize = 21;
+const tileCount = canvas.width / gridSize;
+
+let snake = [
+    {x:10, y:10}
+];
+
+let velocityX = 1;
+let velocityY = 0;
+
+let apple = {
+    x:15,
+    y:15
+};
+
+let score = 0;
+let speed = 110;
+
+function randomApple(){
+
+    apple.x = Math.floor(Math.random() * tileCount);
+    apple.y = Math.floor(Math.random() * tileCount);
+
+    for(let part of snake){
+
+        if(part.x === apple.x && part.y === apple.y){
+            randomApple();
+        }
+    }
+}
+
+function drawBackground(){
+
+    for(let i=0;i<tileCount;i++){
+
+        for(let j=0;j<tileCount;j++){
+
+            ctx.fillStyle = (i+j)%2 === 0
+            ? "#0f172a"
+            : "#111827";
+
+            ctx.fillRect(
+                i * gridSize,
+                j * gridSize,
+                gridSize,
+                gridSize
+            );
+        }
+    }
+}
+
+function drawSnake(){
+
+    snake.forEach((part,index)=>{
+
+        const x = part.x * gridSize;
+        const y = part.y * gridSize;
+
+        const gradient = ctx.createLinearGradient(
+            x,y,x+gridSize,y+gridSize
+        );
+
+        gradient.addColorStop(0,"#4ade80");
+        gradient.addColorStop(1,"#15803d");
+
+        ctx.fillStyle = gradient;
+
+        ctx.beginPath();
+
+        ctx.roundRect(
+            x + 1,
+            y + 1,
+            gridSize - 2,
+            gridSize - 2,
+            8
+        );
+
+        ctx.fill();
+
+        ctx.shadowColor = "#22c55e";
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Snake Eyes
+        if(index === 0){
+
+            ctx.fillStyle = "white";
+
+            ctx.beginPath();
+            ctx.arc(x + 6, y + 7, 2, 0, Math.PI*2);
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.arc(x + 14, y + 7, 2, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+    });
+}
+
+function drawApple(){
+
+    const x = apple.x * gridSize + gridSize/2;
+    const y = apple.y * gridSize + gridSize/2;
+
+    // Apple body
+    ctx.beginPath();
+    ctx.fillStyle = "#ef4444";
+    ctx.arc(x,y,8,0,Math.PI*2);
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor = "#ef4444";
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Leaf
+    ctx.beginPath();
+    ctx.fillStyle = "#22c55e";
+    ctx.ellipse(x+3,y-8,4,2,0.5,0,Math.PI*2);
+    ctx.fill();
+
+    // Stem
+    ctx.beginPath();
+    ctx.strokeStyle = "#8b5a2b";
+    ctx.lineWidth = 2;
+    ctx.moveTo(x,y-5);
+    ctx.lineTo(x,y-10);
+    ctx.stroke();
+}
+
+function moveSnake(){
+
+    const head = {
+        x: snake[0].x + velocityX,
+        y: snake[0].y + velocityY
+    };
+
+    snake.unshift(head);
+
+    // Eat apple
+    if(head.x === apple.x && head.y === apple.y){
+
+        score++;
+        scoreEl.innerText = score;
+
+        randomApple();
+
+        if(speed > 55){
+            speed -= 2;
+        }
+
+    }else{
+        snake.pop();
+    }
+}
+
+function checkCollision(){
+
+    const head = snake[0];
+
+    // Wall collision
+    if(
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= tileCount ||
+        head.y >= tileCount
+    ){
+        return true;
+    }
+
+    // Self collision
+    for(let i=1;i<snake.length;i++){
+
+        if(
+            head.x === snake[i].x &&
+            head.y === snake[i].y
+        ){
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function gameLoop(){
+
+    moveSnake();
+
+    if(checkCollision()){
+
+        gameOverEl.style.display = "block";
+        return;
+    }
+
+    drawBackground();
+    drawApple();
+    drawSnake();
+
+    setTimeout(() => {
+        requestAnimationFrame(gameLoop);
+    }, speed);
+}
+
+function restartGame(){
+
+    snake = [{x:10,y:10}];
+
+    velocityX = 1;
+    velocityY = 0;
+
+    score = 0;
+    speed = 110;
+
+    scoreEl.innerText = score;
+
+    randomApple();
+
+    gameOverEl.style.display = "none";
+
+    gameLoop();
+}
+
+function setDirection(direction){
+
+    switch(direction){
+
+        case "up":
+            if(velocityY !== 1){
+                velocityX = 0;
+                velocityY = -1;
+            }
+        break;
+
+        case "down":
+            if(velocityY !== -1){
+                velocityX = 0;
+                velocityY = 1;
+            }
+        break;
+
+        case "left":
+            if(velocityX !== 1){
+                velocityX = -1;
+                velocityY = 0;
+            }
+        break;
+
+        case "right":
+            if(velocityX !== -1){
+                velocityX = 1;
+                velocityY = 0;
+            }
+        break;
+    }
+}
+
+// KEYBOARD CONTROLS
+document.addEventListener("keydown",(e)=>{
+
+    switch(e.key){
+
+        case "ArrowUp":
+            setDirection("up");
+        break;
+
+        case "ArrowDown":
+            setDirection("down");
+        break;
+
+        case "ArrowLeft":
+            setDirection("left");
+        break;
+
+        case "ArrowRight":
+            setDirection("right");
+        break;
+    }
+
+});
+
+drawBackground();
+drawApple();
+drawSnake();
+gameLoop();
+
+</script>
+
+</body>
+</html>
