@@ -7,7 +7,7 @@ const scoreSchema = new mongoose.Schema({
   score: { type: Number, required: true, default: 0 },
   mode: {
     type: String,
-    enum: ['classic', 'survival', 'time-attack', 'chaos', 'ai'],
+    enum: ['classic', 'survival', 'time-attack', 'chaos', 'ai', 'wrap'],
     default: 'classic',
   },
   friendsEaten: { type: Number, default: 0 },
