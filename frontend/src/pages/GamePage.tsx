@@ -55,9 +55,14 @@ const GamePage: React.FC = () => {
     const loadImage = (src: string): Promise<HTMLImageElement> => {
       return new Promise((resolve) => {
         const img = new Image();
-        img.crossOrigin = 'anonymous';
+        if (src.startsWith('http')) {
+          img.crossOrigin = 'anonymous';
+        }
         img.onload = () => resolve(img);
-        img.onerror = () => resolve(img);
+        img.onerror = (e) => {
+          console.error('Failed to load image:', src.slice(0, 100), e);
+          resolve(img);
+        };
         img.src = src;
       });
     };

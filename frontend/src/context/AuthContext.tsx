@@ -37,11 +37,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (playerImage) localStorage.setItem('playerImage', playerImage);
+    if (playerImage) {
+      try {
+        localStorage.setItem('playerImage', playerImage);
+      } catch (err) {
+        console.warn('Failed to save playerImage to localStorage (quota exceeded):', err);
+      }
+    }
   }, [playerImage]);
 
   useEffect(() => {
-    localStorage.setItem('friendPhotos', JSON.stringify(friendPhotos));
+    try {
+      localStorage.setItem('friendPhotos', JSON.stringify(friendPhotos));
+    } catch (err) {
+      console.warn('Failed to save friendPhotos to localStorage (quota exceeded):', err);
+    }
   }, [friendPhotos]);
 
   const fetchUser = useCallback(async () => {
